@@ -103,6 +103,34 @@
             background: #27ae60;
         }
 
+        /* כפתור ייצוא PDF */
+        .pdf-export {
+            position: fixed;
+            top: 80px;
+            left: 20px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .pdf-export:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        .pdf-export.exporting {
+            background: #f39c12;
+            cursor: not-allowed;
+        }
+
         /* סגנון לעריכה */
         .editable {
             padding: 3px;
@@ -797,6 +825,12 @@
                 padding: 12px 20px;
                 font-size: 0.9em;
             }
+            .pdf-export {
+                top: 65px;
+                left: 10px;
+                padding: 12px 20px;
+                font-size: 0.9em;
+            }
         }
 
         /* Smooth scrolling */
@@ -808,9 +842,10 @@
 <body>
     <div class="container">
         <button class="edit-toggle" onclick="toggleEdit()">🎨 התחל עריכה</button>
+        <button class="pdf-export" onclick="exportToPDF()">📄 ייצוא ל-PDF</button>
         
         <div class="success-message" id="successMessage">✅ מצב עריכה הופעל!</div>
-
+        
         <header class="header">
             <h1 class="editable">דוח ניהול סיכונים מקיף</h1>
             <div class="subtitle editable">פרויקט 720 - טרנספורמציה דיגיטלית ללמידה מותאמת אישית</div>
@@ -1408,6 +1443,92 @@
 
         // Set initial active link if page loads at a certain scroll position
         window.dispatchEvent(new Event('scroll'));
+// Set initial active link if page loads at a certain scroll position
+        window.dispatchEvent(new Event('scroll'));
+
+        // PDF Export functionality
+        async function exportToPDF() {
+            const button = document.querySelector('.pdf-export');
+            
+            if (button.classList.contains('exporting')) return;
+            
+            button.classList.add('exporting');
+            button.textContent = '⏳ מייצא...';
+            
+            try {
+                const wasEditing = isEditing;
+                if (wasEditing) {
+                    editableElements.forEach(el => {
+                        el.contentEditable = false;
+                    });
+                }
+                
+                const elementsToHide = ['.edit-toggle', '.pdf-export', '.success-message', '.back-to-top'];
+                elementsToHide.forEach(selector => {
+                    const el = document.querySelector(selector);
+                    if (el) el.style.display = 'none';
+                });
+                
+                const printCSS = `
+                    @media print {
+                        body { 
+                            -webkit-print-color-adjust: exact !important;
+                            color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                        .edit-toggle, .pdf-export, .success-message, .back-to-top {
+                            display: none !important;
+                        }
+                        .container {
+                            max-width: none !important;
+                            box-shadow: none !important;
+                            border-radius: 0 !important;
+                        }
+                        .section, .summary-box, .risk-card {
+                            page-break-inside: avoid;
+                            break-inside: avoid;
+                        }
+                        .nav-menu {
+                            position: static !important;
+                        }
+                    }
+                `;
+                
+                const style = document.createElement('style');
+                style.textContent = printCSS;
+                document.head.appendChild(style);
+                
+                setTimeout(() => {
+                    window.print();
+                    
+                    setTimeout(() => {
+                        document.head.removeChild(style);
+                        
+                        elementsToHide.forEach(selector => {
+                            const el = document.querySelector(selector);
+                            if (el) el.style.display = '';
+                        });
+                        
+                        if (wasEditing) {
+                            editableElements.forEach(el => {
+                                el.contentEditable = true;
+                            });
+                        }
+                        
+                        button.classList.remove('exporting');
+                        button.textContent = '📄 ייצוא ל-PDF';
+                        
+                        showMessage('✅ ההדפסה הושלמה! בחר "שמור כ-PDF" בדפדפן');
+                    }, 1000);
+                }, 500);
+                
+            } catch (error) {
+                console.error('Export failed:', error);
+                button.classList.remove('exporting');
+                button.textContent = '📄 ייצוא ל-PDF';
+                showMessage('❌ שגיאה בייצוא. נסה שוב.');
+            }
+        }
 
     </script>
 </body>
